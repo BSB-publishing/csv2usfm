@@ -124,11 +124,9 @@ const stripHeader = (str) => {
   return tempStr2
 }
 
-const removeTags = (str) => {
-  return str.replace(/<[^>]*>/g, '')
-               .replace(/\s{2,}/g, '')
-               .trim();
-}
+const removeTags = (str) => str.replace(/<[^>]*>/g, '')
+
+const removeTagsAndTrim = (str) => removeTags(str).replace(/\s{2,}/g, " ").trim()
 
 const convertItalicsTags = (arr,str) => {
   const fqaIdStr = "literally "
@@ -146,7 +144,7 @@ const convertItalicsTags = (arr,str) => {
     const fqPos = curStr.indexOf(fqIdStr)
     if ((fqaPos>=0) && ((fqPos<0) || (fqPos>fqaPos))) {
       if (fqaPos>0) {
-        arr.push(curStr.slice(0,fqaPos+fqaIdLen))
+        arr.push(removeTags(curStr.slice(0,fqaPos+fqaIdLen)))
         // console.log(curStr.slice(0,fqaPos+fqaIdLen))
       }
       const newStr = curStr.slice(fqaPos)
@@ -158,7 +156,7 @@ const convertItalicsTags = (arr,str) => {
         arr.push({
           "type": "char",
           "marker": "fqa",
-          "content": [ removeTags(tempStr) ]
+          "content": [ removeTagsAndTrim(tempStr) ]
         })
         // console.log(curStr.slice(fqaFullIdLen,fqaEndPos))
       }
@@ -168,7 +166,7 @@ const convertItalicsTags = (arr,str) => {
       // console.log("fqa "+str)
     } else if (fqPos>=0) {
       if (fqPos>0) {
-        arr.push(curStr.slice(0,fqPos))
+        arr.push(removeTags(curStr.slice(0,fqPos)))
         // console.log(curStr.slice(0,fqPos))
       }
       const newStr = curStr.slice(fqPos)
@@ -180,17 +178,20 @@ const convertItalicsTags = (arr,str) => {
         arr.push({
           "type": "char",
           "marker": "fq",
-          "content": [ removeTags(tempStr) ]
+          "content": [ removeTagsAndTrim(tempStr) ]
         })
         // console.log(arr)
-        // console.log(removeTags(tempStr))
+        // console.log(removeTagsAndTrim(tempStr))
       }
       const newStr2 = curStr.slice(fqEndPos+fqEndIdLen)
       curStr = newStr2
       // console.log(curStr)
       // console.log("fq "+str)  
     } else {
-      arr.push(curStr)
+      const checkStr = removeTagsAndTrim(curStr)
+      if ((checkStr) && (checkStr.length > 0)) {
+        arr.push(checkStr)
+      }
       done = true
     } 
   }
@@ -233,17 +234,27 @@ const parseLinePart1 = (ws,content,lineItem,bcvObj) => {
     })
   }
   if (lineItem?.Hdg) {
+    const checkStr = stripHeader(lineItem?.Hdg)
+    let contentStr = removeTagsAndTrim(checkStr)
+    const acrosticPos = checkStr.indexOf("<p class=|acrostic|>")
+    if (acrosticPos>=0) {
+      const convertedUnicodeCh = (str) => String.fromCharCode(parseInt(str))
+      const acrosticStr = checkStr.replace(/(<p class=\|acrostic\|>&#)(\d\d\d\d)(.*)/g, "$2")
+      const acrosticLetter = convertedUnicodeCh(acrosticStr)
+      // Convert f.ex &#1489; to the actual Hebrew letter followed by " - "
+      contentStr = contentStr.replace(/(&#\d\d\d\d;\s*)/g, acrosticLetter + " - ")
+    }
     content.push({
       type: "para",
       marker: "s1",
-      content: [ stripHeader(lineItem.Hdg) ]
+      content: [ contentStr ]
     })
   }
   if (lineItem?.Crossref) {
     content.push({
       type: "para",
       marker: "r",
-      content: [ `${removeTags(lineItem.Crossref)}` ]
+      content: [ removeTagsAndTrim(lineItem.Crossref) ]
     })
   }
 }
@@ -262,7 +273,7 @@ const parseLinePart2 = (ws,content,lineItem,bcvObj) => {
   if (lineItem?.space) content.push(lineItem?.space)
   let curStr = ""
   if (lineItem?.begQ) {
-    curStr = lineItem?.begQ
+    curStr = removeTags(lineItem?.begQ)
   }
   if (lineItem?.BSBversion) {
     let addStr = lineItem.BSBversion?.trim()
@@ -299,7 +310,7 @@ const parseLinePart2 = (ws,content,lineItem,bcvObj) => {
       strong: lineItem?.StrGrk
     })
   } else if (curStr.length>0) {
-    content.push(curStr)
+    content.push(removeTags(curStr))
   }
   let ftContent
   if (lineItem?.footnotes) {
@@ -391,7 +402,10 @@ const parseLinePart2 = (ws,content,lineItem,bcvObj) => {
     })
   }
   if (lineItem?.Endtext && lineItem.Endtext.length>0) {
-    content.push(lineItem?.Endtext)
+    const cleanStr = removeTags(lineItem?.Endtext)
+    if ((cleanStr) && (cleanStr.length>0)) {
+      content.push(cleanStr)
+    }
   }
 }
 
