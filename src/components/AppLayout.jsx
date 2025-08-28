@@ -9,7 +9,7 @@ import Typography from "@mui/material/Typography"
 import TextField from "@mui/material/TextField"
 import JSZip from 'jszip'
 
-const zip = new JSZip();
+const zip = new JSZip()
 
 export default function AppLayout() {
   // eslint-disable-next-line no-unused-vars
@@ -20,27 +20,36 @@ export default function AppLayout() {
   const [placeholders, setPlaceholders] = useState(false)
   const [brackets, setBrackets] = useState(false)
   
-  const [result, setResult] = useState(null);
-  const [worker, setWorker] = useState(null);
+  const [result, setResult] = useState(null)
+  const [worker, setWorker] = useState(null)
 
   useEffect(() => {
     const initParser = async () => {
       await USFMParser.init("https://cdn.jsdelivr.net/npm/usfm-grammar-web@3.0.0/tree-sitter-usfm.wasm",
-                            "https://cdn.jsdelivr.net/npm/usfm-grammar-web@3.0.0/tree-sitter.wasm");
+                            "https://cdn.jsdelivr.net/npm/usfm-grammar-web@3.0.0/tree-sitter.wasm")
 
-    };
-    initParser();
+    }
+    initParser()
 
     const handleCompleted = (resUsj,bookIdStr) => {
-      zip.file(`${bookIdStr}.usj`, JSON.stringify(resUsj)); // adds the USJ data to the zip file
-      console.log(resUsj)
+      zip.file(`${bookIdStr}.usj`, JSON.stringify(resUsj)) // adds the USJ data to the zip file
+      // console.log(resUsj)
       const usfmParser2 = new USFMParser(null, resUsj) 
-      const usfmStr = usfmParser2.usfm;
-      const adaptedStr1 = usfmStr.replace(/ \\v (\d*)/g,"\n\\v $1")
-      const adaptedStr2 = adaptedStr1.replace(/\\v (\d*)\s*\n/g,"\n\\v $1 ")
-      const adaptedStr3 = adaptedStr2.replace(/\s*\n/g,"\n")
-      const adaptedStr4 = adaptedStr3.replace(/\s\s/g," ")
-      zip.file(`${bookIdStr}.usfm`, adaptedStr4); // adds the USFM data to the zip file  
+      const usfmStr = usfmParser2.usfm
+      // Perform some clean up regEx replacements 
+      // - in order to "clean up" some minor things after the USFMParser USFM conversion 
+      let adaptedStr = usfmStr.replace(/ \\v (\d*)/g,"\n\\v $1")
+      adaptedStr = adaptedStr.replace(/\\v (\d*)\s*\n/g,"\n\\v $1 ")
+      adaptedStr = adaptedStr.replace(/\s*\n/g,"\n")
+      adaptedStr = adaptedStr.replace(/\s\s/g," ")
+      // Remove unnecessary \f closing markers - due to 4 different marker we need to do this 4 times
+      adaptedStr = adaptedStr.replace(/(\\ft\*|\\fr\*|\\\+fq\*|\\\+fqa\*)\s((\\ft[^*]|\\\+fq[^*]|\\fr[^*]|\\f\*))/g,"$2")
+      adaptedStr = adaptedStr.replace(/(\\ft\*|\\fr\*|\\\+fq\*|\\\+fqa\*)\s((\\ft[^*]|\\\+fq[^*]|\\fr[^*]|\\f\*))/g,"$2")
+      adaptedStr = adaptedStr.replace(/(\\ft\*|\\fr\*|\\\+fq\*|\\\+fqa\*)\s((\\ft[^*]|\\\+fq[^*]|\\fr[^*]|\\f\*))/g,"$2")
+      adaptedStr = adaptedStr.replace(/(\\ft\*|\\fr\*|\\\+fq\*|\\\+fqa\*)\s((\\ft[^*]|\\\+fq[^*]|\\fr[^*]|\\f\*))/g,"$2")
+      // Trim unnecessary spaces
+      adaptedStr = adaptedStr.replace(/\s\s/g," ")
+      zip.file(`${bookIdStr}.usfm`, adaptedStr) // adds the USFM data to the zip file  
     }
 
     const handleParseFinished = async () => {
@@ -49,36 +58,36 @@ export default function AppLayout() {
         type: "blob",
         streamFiles: true
       })
-      const link = document.createElement('a');
-      link.href = window.URL.createObjectURL(zipData);
+      const link = document.createElement('a')
+      link.href = window.URL.createObjectURL(zipData)
       link.download = `BSB.zip`
-      link.click();
+      link.click()
     }
   
     // Create a new web worker
-    const myWorker = new Worker('/worker.js');
+    const myWorker = new Worker('/worker.js')
 
     // Set up event listener for messages from the worker
     myWorker.onmessage = function (event) {
       const bookIdStr = event?.data?.bookIdStr
       const usjObj = event?.data?.usjObj
-      console.log('Received result from worker:', bookIdStr);
-      setResult(bookIdStr);
+      console.log('Received result from worker:', bookIdStr)
+      setResult(bookIdStr)
       handleCompleted(usjObj,bookIdStr)
       if (event?.data?.parserFinished) {
         setLoading(false)
         handleParseFinished()
       }
-    };
+    }
 
     // Save the worker instance to state
-    setWorker(myWorker);
+    setWorker(myWorker)
 
     // Clean up the worker when the component unmounts
     return () => {
-      myWorker.terminate();
-    };
-  }, []); // Run this effect only once when the component mounts
+      myWorker.terminate()
+    }
+  }, []) // Run this effect only once when the component mounts
  
   const handleClick = () => {
     setLoading(true)
