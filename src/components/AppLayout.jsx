@@ -47,6 +47,9 @@ export default function AppLayout() {
       adaptedStr = adaptedStr.replace(/(\\ft\*|\\fr\*|\\\+fq\*|\\\+fqa\*)\s((\\ft[^*]|\\\+fq[^*]|\\fr[^*]|\\f\*))/g,"$2")
       adaptedStr = adaptedStr.replace(/(\\ft\*|\\fr\*|\\\+fq\*|\\\+fqa\*)\s((\\ft[^*]|\\\+fq[^*]|\\fr[^*]|\\f\*))/g,"$2")
       adaptedStr = adaptedStr.replace(/(\\ft\*|\\fr\*|\\\+fq\*|\\\+fqa\*)\s((\\ft[^*]|\\\+fq[^*]|\\fr[^*]|\\f\*))/g,"$2")
+      // Remove unnecessary space after \+fq* if it is before . or ,
+      adaptedStr = adaptedStr.replace(/(\\\+fq\*) ,/g,"$1,")
+      adaptedStr = adaptedStr.replace(/(\\\+fq\*) \./g,"$1.")
       // Trim unnecessary spaces
       adaptedStr = adaptedStr.replace(/\s\s/g," ")
       zip.file(`${bookIdStr}.usfm`, adaptedStr) // adds the USFM data to the zip file  
