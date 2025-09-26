@@ -38,8 +38,8 @@ export default function AppLayout() {
       const usfmStr = usfmParser2.usfm
       // Perform some clean up regEx replacements 
       // - in order to "clean up" some minor things after the USFMParser USFM conversion 
-      let adaptedStr = usfmStr.replace(/ \\v (\d*)/g,"\n\\v $1")
-      adaptedStr = adaptedStr.replace(/\\v (\d*)\s*\n/g,"\n\\v $1 ")
+      let adaptedStr = usfmStr.replace(/\\v (\d*)\s*\n/g,"\n\\v $1 ")
+      adaptedStr = adaptedStr.replace(/(\S)\\v (\d*)\s*/g,"$1 \\v $2 ")
       adaptedStr = adaptedStr.replace(/\s*\n/g,"\n")
       adaptedStr = adaptedStr.replace(/\s\s/g," ")
       // Remove unnecessary \f closing markers - due to 4 different marker we need to do this 4 times
